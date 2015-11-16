@@ -1,6 +1,6 @@
 /**
  * @fileoverview Teamcity report formatter plugin for gulp-eslint
- * @author Andre Ogle
+ * @author Andre Ogle, Tomas Jirsa
  */
 
 'use strict';
@@ -49,24 +49,32 @@ module.exports = function(results) {
       return;
     }
 
-    output += '##teamcity[testStarted name=\'' + reportName + ': ' +
-               escapeTeamCityString(result.filePath) + '\']\n';
-
     var messageList = [];
+    var status = 'WARNING';
 
     messages.forEach(function(message) {
+      var localStatus = 'WARNING';
       if (message.severity === 2) {
-        messageList.push(
-          'line ' + message.line +
-          ', col ' + message.column + ', ' + message.message
-        );
+        status = localStatus = 'ERROR';
       }
+      messageList.push(
+        'line ' + message.line +
+        ', col ' + message.column + ', ' + localStatus + ': ' + message.message
+      );
+
     });
 
-    if (messageList.length) {
+    output += '##teamcity[testStarted name=\'' + reportName + ': ' +
+      escapeTeamCityString(result.filePath) + '\']\n';
+
+    if (messageList.length && status == 'ERROR') {
       output += '##teamcity[testFailed name=\'' + reportName + ': ' +
         escapeTeamCityString(result.filePath) + '\' message=\'' +
         escapeTeamCityString(messageList.join('\n')) + '\']\n';
+    } else if (messageList.length) {
+      output += '##teamcity[testIgnored name=\'' + reportName + ': ' +
+      escapeTeamCityString(result.filePath) + '\' message=\'' +
+      escapeTeamCityString(messageList.join('\n')) + '\']\n';
     }
 
     output += '##teamcity[testFinished name=\'' + reportName + ': ' +
@@ -77,5 +85,4 @@ module.exports = function(results) {
 
   return output;
 };
-
 
